@@ -2,6 +2,7 @@ from autocorrect import Speller
 spell = Speller('ru')
 
 
+# Исправление слова и засечение времени
 def check_word(word):
     import time
 
@@ -14,6 +15,7 @@ def check_word(word):
 def corrector():
     while True:
         input_word = input('Введите слово (чтобы выйти введите "выход"): ')
+        # Стоп-слово для выхода из программы
         if input_word == 'выход':
             return
         check_word(input_word)
