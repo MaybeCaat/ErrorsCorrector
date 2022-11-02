@@ -1,4 +1,4 @@
-import asyncio
+import time
 import logging
 from aiogram import Bot, Dispatcher, executor, types
 from autocorrect import Speller
@@ -13,29 +13,27 @@ dp = Dispatcher(bot)
 
 # Исправление слова и засечение времени
 def check_word(word):
-    import time
-
     start_time = time.time()
-    print(spell.get_candidates(word))
-    print(spell(word))
+    # list_result = spell.get_candidates(word)
+    result = spell(word)
     end_time = time.time()
-    print(f'Время выполнения программы: {end_time - start_time} \n')
-
-
-def corrector():
-    while True:
-        input_word = input('Введите слово (чтобы выйти введите "выход"): ')
-        # Стоп-слово для выхода из программы
-        if input_word == 'выход':
-            return
-        check_word(input_word)
+    print(f'Время исправления слова: {end_time - start_time} секунд\n')
+    return result
 
 
 @dp.message_handler(commands=['start'])
 async def cmd_start(message: types.Message):
-    await message.answer("Hello!")
+    await message.answer("Привет!")
+
+
+@dp.message_handler()
+async def get_word(message: types.Message):
+    result_word = check_word(message.text)
+    if result_word == message.text:
+        await message.reply('Вы правильно написали слово!')
+        return
+    await message.reply(f'Правильное написание Вашего слова: {result_word}')
 
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
-    # corrector()
