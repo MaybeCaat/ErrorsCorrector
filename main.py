@@ -14,10 +14,12 @@ dp = Dispatcher(bot)
 # Исправление слова и засечение времени
 def check_word(word):
     start_time = time.time()
+
     # list_result = spell.get_candidates(word)
     result = spell(word)
+
     end_time = time.time()
-    print(f'Время исправления слова: {end_time - start_time} секунд\n')
+    print(f'Время исправления слова: {end_time - start_time} секунд')
     return result
 
 
