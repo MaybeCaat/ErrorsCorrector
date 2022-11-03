@@ -17,15 +17,18 @@ dp = Dispatcher(bot)
 async def check_word(word):
     start_time = time.time()
 
+    # получение списка с возможными исправлениями
     result_word = dictionary.suggest(word)
-    # ЧТОБЫ РАБОТАЛО С РУССКИМИ СЛОВАМИ
+    # получение страницы с нужным правилом по первому слову из resu
     res = requests.get(
         'https://gramotei.online/how-to-spell',
         params={'keyword': result_word[0]}
     )
     soup = BeautifulSoup(res.text, 'html.parser')
     elem = soup.find("div", class_='hidden-xs col-sm-8 border-bottom text-muted search-item')
+    # получение текста правила из элемента
     rule = elem.text
+    # создаём список-пару из слова и правила к нему
     result = [result_word, rule]
 
     end_time = time.time()
@@ -33,6 +36,7 @@ async def check_word(word):
     return result
 
 
+# стартовое сообщение
 @dp.message_handler(commands=['start'])
 async def cmd_start(message: types.Message):
     await message.answer("Привет! Это бот для проверки орфографии. Введите слово и бот выдаст его правильное написание")
@@ -40,6 +44,7 @@ async def cmd_start(message: types.Message):
 
 @dp.message_handler()
 async def get_word(message: types.Message):
+    # проверка, что слово изначально правильно написано
     if dictionary.check(message.text):
         await message.reply('Вы правильно написали слово!')
         return
