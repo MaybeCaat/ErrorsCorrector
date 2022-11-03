@@ -19,11 +19,13 @@ async def check_word(word):
 
     result_word = dictionary.suggest(word)
     # ЧТОБЫ РАБОТАЛО С РУССКИМИ СЛОВАМИ
-    print(f'https://gramotei.online/how-to-spell?keyword={result_word[0]}')
-    res = requests.get(f'https://gramotei.online/how-to-spell?keyword={result_word[0]}')
+    res = requests.get(
+        'https://gramotei.online/how-to-spell',
+        params={'keyword': result_word[0]}
+    )
     soup = BeautifulSoup(res.text, 'html.parser')
     elem = soup.find("div", class_='hidden-xs col-sm-8 border-bottom text-muted search-item')
-    rule = elem.string
+    rule = elem.text
     result = [result_word, rule]
 
     end_time = time.time()
