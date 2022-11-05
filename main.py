@@ -1,3 +1,4 @@
+import difflib
 import time
 import logging
 import enchant
@@ -7,6 +8,10 @@ from aiogram.dispatcher.filters import Text
 
 from config import BOT_TOKEN
 from bs4 import BeautifulSoup
+
+
+# Если слово не найдено - попробовать лематизировать в нач. форму и проверить на правило
+# Проверка если введены лишние символы (по типу / убрать, а _ заменить на любую букву (надо протестить)
 
 
 # не забыть перекинуть файлы локализации
@@ -22,10 +27,23 @@ async def get_keyboard_corrections(source_word):
 
     # перевод слова в нижний регистр
     word = source_word.lower()
+    # словарь с значениями степеней сходства изменённого и исходного слова (от 0 до 1)
+    sim = dict()
     # получение списка с возможными исправлениями
-    result_word = dictionary.suggest(word)
+    result_words = set(dictionary.suggest(word))
+    print(f'Старый список: {dictionary.suggest(word)}')
+    for corr_word in result_words:
+        # получаем значение сходства
+        measure = difflib.SequenceMatcher(None, word, corr_word).ratio()
+        # заносим в виде - слово: значение
+        sim[corr_word] = measure
+    # сортируем по значению сходства
+    sim_rev = dict(sorted(sim.items(), key=lambda x: x[1]))
+    # переворачиваем, чтобы словарь был по убыванию значений
+    sim = {k: v for k, v in reversed(list(sim_rev.items()))}
+    print(f'Новый список: {list(sim.keys())}')
     buttons = [
-        types.InlineKeyboardButton(text=el, callback_data=f"word_{el}") for el in result_word
+        types.InlineKeyboardButton(text=el, callback_data=f"word_{el}") for el in list(sim.keys())
     ]
     # row_width=1 - одна кнопка в строчке
     keyboard = types.InlineKeyboardMarkup(row_width=1)
@@ -33,7 +51,7 @@ async def get_keyboard_corrections(source_word):
 
     end_time = time.time()
     print(f'Слово: {source_word}')
-    print(f'Список возможных исправлений: {result_word}')
+    print(f'Список возможных исправлений: {result_words}')
     print(f'Время исправления слова: {end_time - start_time} секунд')
     print('--------------------------------------------------------')
     return keyboard
