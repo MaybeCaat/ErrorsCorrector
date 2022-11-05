@@ -8,10 +8,6 @@ from aiogram.dispatcher.filters import Text
 from config import BOT_TOKEN
 from bs4 import BeautifulSoup
 
-# ВОЗМОЖНО СДЕЛАТЬ ЛОГИ
-# ПОФИКСИТЬ ВЗЯТИЕ ЭЛЕМЕНТА:
-# не всегда на первом месте в сайте нужное
-
 
 # не забыть перекинуть файлы локализации
 dictionary = enchant.Dict('ru_RU')
@@ -20,7 +16,7 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot)
 
 
-# Исправление слова и засечение времени
+# исправление слова и возвращение клавиатуры с возможными вариантами
 async def get_keyboard_corrections(word):
     start_time = time.time()
 
@@ -49,16 +45,16 @@ async def get_rule(word):
     soup = BeautifulSoup(res.text, 'html.parser')
     # проверка, если правило на сайте не найдено
     if soup.blockquote:
-        return "К сожалению, правило не найдено"
+        return "к сожалению, правило не найдено"
     # поиск элемента с нужным названием
     word_elem = soup.find_all("div", class_='col-xs-12 col-sm-4 border-bottom search-item')
     # изначальное значение, выведет его, если не найдёт соответствия в цикле
-    rule = 'К сожалению, правило не найдено'
+    rule = 'к сожалению, правило не найдено'
     # прохожу по всем словам
     for el in word_elem:
         # ищу нужное слово
         if el.a.text == word:
-            rule = el.small.text
+            rule = el.small.text.lower()
 
     end_time = time.time()
     print(f'Время поиска правила: {end_time - start_time} секунд')
@@ -71,13 +67,15 @@ async def cmd_start(message: types.Message):
     await message.answer("Привет! Это бот для проверки орфографии. Введите слово и бот выдаст его правильное написание")
 
 
+# функция для вывода клавиатуры с возможными вариантами
 @dp.message_handler()
 async def get_word(message: types.Message):
     # проверка, что слово изначально правильно написано
     if dictionary.check(message.text):
         await message.reply('Вы правильно написали слово!')
         return
-    keyboard = await get_keyboard_corrections(message.text)
+    # получение клавиатуры
+    keyboard = await get_keyboard_corrections(message.text.lower())
     await message.reply(f'Вы ввели слово {message.text}. \nВозможные исправления Вашего слова: ', reply_markup=keyboard)
 
 
@@ -86,6 +84,8 @@ async def get_word(message: types.Message):
 async def callbacks_corr_word(call: types.CallbackQuery):
     # извлекаем слово из callback_data (формат: word_слово)
     word = call.data.split("_")[1]
+    # переводим слово в нижний регистр
+    word = word.lower()
     # получаем правило с помощью get_rule()
     rule = await get_rule(word)
     await call.message.answer(f'Правильное написание: {word} \nПравило: {rule}')
