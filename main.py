@@ -17,9 +17,11 @@ dp = Dispatcher(bot)
 
 
 # исправление слова и возвращение клавиатуры с возможными вариантами
-async def get_keyboard_corrections(word):
+async def get_keyboard_corrections(source_word):
     start_time = time.time()
 
+    # перевод слова в нижний регистр
+    word = source_word.lower()
     # получение списка с возможными исправлениями
     result_word = dictionary.suggest(word)
     buttons = [
@@ -30,7 +32,10 @@ async def get_keyboard_corrections(word):
     keyboard.add(*buttons)
 
     end_time = time.time()
+    print(f'Слово: {source_word}')
+    print(f'Список возможных исправлений: {result_word}')
     print(f'Время исправления слова: {end_time - start_time} секунд')
+    print('--------------------------------------------------------')
     return keyboard
 
 
@@ -57,7 +62,10 @@ async def get_rule(word):
             rule = el.small.text.lower()
 
     end_time = time.time()
+    print(f'Слово: {word}')
+    print(f'Правило: {rule}')
     print(f'Время поиска правила: {end_time - start_time} секунд')
+    print('--------------------------------------------------------')
     return rule
 
 
@@ -75,7 +83,7 @@ async def get_word(message: types.Message):
         await message.reply('Вы правильно написали слово!')
         return
     # получение клавиатуры
-    keyboard = await get_keyboard_corrections(message.text.lower())
+    keyboard = await get_keyboard_corrections(message.text)
     await message.reply(f'Вы ввели слово {message.text}. \nВозможные исправления Вашего слова: ', reply_markup=keyboard)
 
 
@@ -84,8 +92,6 @@ async def get_word(message: types.Message):
 async def callbacks_corr_word(call: types.CallbackQuery):
     # извлекаем слово из callback_data (формат: word_слово)
     word = call.data.split("_")[1]
-    # переводим слово в нижний регистр
-    word = word.lower()
     # получаем правило с помощью get_rule()
     rule = await get_rule(word)
     await call.message.answer(f'Правильное написание: {word} \nПравило: {rule}')
