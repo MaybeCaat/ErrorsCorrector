@@ -81,6 +81,9 @@ async def get_word(message: types.Message):
     # проверка, что слово изначально правильно написано
     if dictionary.check(message.text):
         await message.reply('Вы правильно написали слово!')
+        print(f'Слово: {message.text}')
+        print('Написано правильно')
+        print('--------------------------------------------------------')
         return
     # получение клавиатуры
     keyboard = await get_keyboard_corrections(message.text)
