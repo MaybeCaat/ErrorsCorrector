@@ -8,6 +8,11 @@ from aiogram.dispatcher.filters import Text
 from config import BOT_TOKEN
 from bs4 import BeautifulSoup
 
+# ВОЗМОЖНО СДЕЛАТЬ ЛОГИ
+# ПОФИКСИТЬ ВЗЯТИЕ ЭЛЕМЕНТА:
+# не всегда на первом месте в сайте нужное
+
+
 # не забыть перекинуть файлы локализации
 dictionary = enchant.Dict('ru_RU')
 logging.basicConfig(level=logging.INFO)
@@ -42,9 +47,18 @@ async def get_rule(word):
         params={'keyword': word}
     )
     soup = BeautifulSoup(res.text, 'html.parser')
-    elem = soup.find("div", class_='hidden-xs col-sm-8 border-bottom text-muted search-item')
-    # получение текста правила из элемента
-    rule = elem.text
+    # проверка, если правило на сайте не найдено
+    if soup.blockquote:
+        return "К сожалению, правило не найдено"
+    # поиск элемента с нужным названием
+    word_elem = soup.find_all("div", class_='col-xs-12 col-sm-4 border-bottom search-item')
+    # изначальное значение, выведет его, если не найдёт соответствия в цикле
+    rule = 'К сожалению, правило не найдено'
+    # прохожу по всем словам
+    for el in word_elem:
+        # ищу нужное слово
+        if el.a.text == word:
+            rule = el.small.text
 
     end_time = time.time()
     print(f'Время поиска правила: {end_time - start_time} секунд')
