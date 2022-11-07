@@ -15,8 +15,8 @@ from bs4 import BeautifulSoup
 # Пофиксить некоторые элементы в списке изменённых слов
 # (когда в элементе 2 непонятных слова через пробел + непонятные слова)
 # Возможно запилить поддержку предложений
-# !!!Проверка на непонятную последовательность (ееее)
 # Проверить новую генерацию списков (если что убрать)
+# РЕФАКТОР НАЗВАНИЙ ПЕРЕМЕННЫХ
 
 
 # не забыть перекинуть файлы локализации
@@ -27,16 +27,13 @@ dp = Dispatcher(bot)
 
 
 # исправление слова и возвращение клавиатуры с возможными вариантами
-async def get_keyboard_corrections(source_word):
+async def get_keyboard_corrections(word):
     start_time = time.time()
 
-    # перевод слова в нижний регистр
-    word = source_word.lower()
     # словарь с значениями степеней сходства изменённого и исходного слова (от 0 до 1)
     sim = dict()
-    # получение списка с возможными исправлениями
+    # получение множества с возможными исправлениями
     result_words = set(dictionary.suggest(word))
-    print(f'Старый список: {dictionary.suggest(word)}')
     for corr_word in result_words:
         # получаем значение сходства
         measure = difflib.SequenceMatcher(None, word, corr_word).ratio()
@@ -46,16 +43,20 @@ async def get_keyboard_corrections(source_word):
     sim_rev = dict(sorted(sim.items(), key=lambda x: x[1]))
     # переворачиваем, чтобы словарь был по убыванию значений
     sim = {k: v for k, v in reversed(list(sim_rev.items()))}
-    print(f'Новый список: {list(sim.keys())}')
+    # список со всеми исправленными словами в порядке убывания значений их сходства
+    sim_words = list(sim.keys())
+
+    # создаем кнопки
     buttons = [
-        types.InlineKeyboardButton(text=el, callback_data=f"word_{el}") for el in list(sim.keys())
+        types.InlineKeyboardButton(text=el, callback_data=f"word_{el}") for el in sim_words
     ]
     # row_width=1 - одна кнопка в строчке
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     keyboard.add(*buttons)
 
     end_time = time.time()
-    print(f'Слово: {source_word}')
+    print(f'Старый список: {dictionary.suggest(word)}')
+    print(f'Новый список: {sim_words}')
     print(f'Список возможных исправлений: {result_words}')
     print(f'Время исправления слова: {end_time - start_time} секунд')
     print('--------------------------------------------------------')
@@ -66,23 +67,22 @@ async def get_keyboard_corrections(source_word):
 async def get_rule(word):
     start_time = time.time()
 
-    res = requests.get(
+    # изначальное значение, выведет его, если не найдёт соответствия в цикле
+    rule = 'к сожалению, правило не найдено'
+    response = requests.get(
         'https://gramotei.online/how-to-spell',
         params={'keyword': word}
     )
-    soup = BeautifulSoup(res.text, 'html.parser')
+    soup = BeautifulSoup(response.text, 'html.parser')
     # проверка, если правило на сайте не найдено
     if soup.blockquote:
-        return "к сожалению, правило не найдено"
-    # поиск элемента с нужным названием
-    word_elem = soup.find_all("div", class_='col-xs-12 col-sm-4 border-bottom search-item')
-    # изначальное значение, выведет его, если не найдёт соответствия в цикле
-    rule = 'к сожалению, правило не найдено'
-    # прохожу по всем словам
-    for el in word_elem:
-        # ищу нужное слово
-        if el.a.text == word:
-            rule = el.small.text.lower()
+        return rule
+    # берём все слова
+    word_elems = soup.find_all("div", class_='col-xs-12 col-sm-4 border-bottom search-item')
+    for word_elem in word_elems:
+        # ищем нужное слово
+        if word_elem.a.text == word:
+            rule = word_elem.small.text.lower()
 
     end_time = time.time()
     print(f'Слово: {word}')
@@ -115,8 +115,9 @@ async def get_word(message: types.Message):
         print('Исправления не найдены')
         print('--------------------------------------------------------')
         return
-    # получение клавиатуры
-    keyboard = await get_keyboard_corrections(message.text)
+    print(f'Слово: {message.text}')
+    # получение клавиатуры (отправляем слово в нижнем регистре)
+    keyboard = await get_keyboard_corrections(message.text.lower())
     await message.reply(f'Вы ввели слово {message.text}. \nВозможные исправления Вашего слова: ', reply_markup=keyboard)
 
 
