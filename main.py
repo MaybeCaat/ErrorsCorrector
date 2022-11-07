@@ -33,22 +33,20 @@ async def get_keyboard_corrections(word):
     # словарь с значениями степеней сходства изменённого и исходного слова (от 0 до 1)
     sim = dict()
     # получение множества с возможными исправлениями
-    result_words = set(dictionary.suggest(word))
-    for corr_word in result_words:
+    corr_words = set(dictionary.suggest(word))
+    for corr_word in corr_words:
         # получаем значение сходства
         measure = difflib.SequenceMatcher(None, word, corr_word).ratio()
         # заносим в виде - слово: значение
         sim[corr_word] = measure
     # сортируем по значению сходства
-    sim_rev = dict(sorted(sim.items(), key=lambda x: x[1]))
-    # переворачиваем, чтобы словарь был по убыванию значений
-    sim = {k: v for k, v in reversed(list(sim_rev.items()))}
+    sim = dict(sorted(sim.items(), key=lambda x: x[1]))
     # список со всеми исправленными словами в порядке убывания значений их сходства
-    sim_words = list(sim.keys())
+    corr_words = list(reversed(sim))
 
     # создаем кнопки
     buttons = [
-        types.InlineKeyboardButton(text=el, callback_data=f"word_{el}") for el in sim_words
+        types.InlineKeyboardButton(text=el, callback_data=f"word_{el}") for el in corr_words
     ]
     # row_width=1 - одна кнопка в строчке
     keyboard = types.InlineKeyboardMarkup(row_width=1)
@@ -56,8 +54,7 @@ async def get_keyboard_corrections(word):
 
     end_time = time.time()
     print(f'Старый список: {dictionary.suggest(word)}')
-    print(f'Новый список: {sim_words}')
-    print(f'Список возможных исправлений: {result_words}')
+    print(f'Новый список: {corr_words}')
     print(f'Время исправления слова: {end_time - start_time} секунд')
     print('--------------------------------------------------------')
     return keyboard
@@ -78,11 +75,11 @@ async def get_rule(word):
     if soup.blockquote:
         return rule
     # берём все слова
-    word_elems = soup.find_all("div", class_='col-xs-12 col-sm-4 border-bottom search-item')
-    for word_elem in word_elems:
+    word_rows = soup.find_all("div", class_='col-xs-12 col-sm-4 border-bottom search-item')
+    for row in word_rows:
         # ищем нужное слово
-        if word_elem.a.text == word:
-            rule = word_elem.small.text.lower()
+        if row.a.text == word:
+            rule = row.small.text.lower()
 
     end_time = time.time()
     print(f'Слово: {word}')
