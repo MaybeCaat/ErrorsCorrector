@@ -34,3 +34,8 @@ to the library folder:
 - Если Вы используете venv, папка: ...\venv\Lib\site-packages\enchant\data\mingw64\share\enchant\hunspell
 
 ## Another language / Другой язык
+To set a different language, enter it in the dictionary variable.    
+At the same time, the language with this name should be in the folder with the enchant library (see the paragraph above)
+
+Чтобы установить другой язык - впишите его в переменную dictionary.     
+При этом язык с таким названием должен быть в папке с библиотекой enchant (смотрите пункт выше)
