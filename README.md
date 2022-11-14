@@ -18,7 +18,7 @@ https://t.me/ru_corrector_bot
 
 
 ## Warning / Предупреждение
-In Russian:
+In English:
 1) Add the bot token to the BOT_TOKEN variable in config.py or directly to main.py
 2) The bot only works with Russian. But to make it work, move 2 files from the localize folder
 to the library folder:
