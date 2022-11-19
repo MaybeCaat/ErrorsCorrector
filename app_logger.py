@@ -11,7 +11,6 @@ def get_file_handler():
 
 
 def get_stream_handler():
-    # TODO: цветные логи в консоль
     stream_handler = logging.StreamHandler()
     stream_handler.setLevel(logging.INFO)
     stream_handler.setFormatter(logging.Formatter(_log_format, datefmt='%Y-%m-%d %H:%M:%S'))
