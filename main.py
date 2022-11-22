@@ -15,20 +15,24 @@ dictionary = enchant.Dict('ru_RU')
 logger = app_logger.get_logger(__name__)
 morph = MorphAnalyzer()
 cb = CallbackData('post', 'old_word', 'word')
-bot = Bot(token=BOT_TOKEN)
+bot = Bot(token=BOT_TOKEN, parse_mode=types.ParseMode.HTML)
 dp = Dispatcher(bot)
 
 
 # TODO: возможно запилить поддержку предложений (и словосочетаний с значением, например пре-, при-)
 # TODO: сделать красивое оформление
-# убрать кнопки клавиатуры с пробелами
+# убрать кнопки клавиатуры с пробелами (c хернёй, а с НЕ не убирать)
 # попробовать переводить в другую часть речи, если не находит правило
 
 
 # стартовое сообщение
 @dp.message_handler(commands=['start'])
 async def cmd_start(message: types.Message):
-    await message.answer("Привет! Это бот для проверки орфографии. Введите слово и бот выдаст его правильное написание")
+    await message.answer("Здравствуйте! \n"
+                         "Перед вами бот для проверки орфографии. \n\n"
+                         "Введите слово и бот выдаст: \n"
+                         "1) <i>правильное написание</i> слова \n"
+                         "2) <i>правило</i>, которое использовалось в данном случае")
 
 
 # функция для вывода клавиатуры с возможными вариантами
@@ -37,28 +41,28 @@ async def get_word(message: types.Message):
     # проверка, что строка состоит только из символов (НЕТ букв и цифр)
     isOnlySymbols = all(symb in string.punctuation for symb in message.text)
     if isOnlySymbols is True:
-        await message.reply('Пожалуйста, введите слово, а не набор символов!')
+        await message.reply('Пожалуйста, введите <u>слово</u>, а не набор символов!')
         logger.warning('--------------------------------------------------------')
         logger.warning(f'Слово: {message.text}')
         logger.warning('Введены только символы')
         return
     # проверка, что ввели несколько слов
     if len(message.text.split()) != 1:
-        await message.reply('Пожалуйста, введите ОДНО слово!')
+        await message.reply('Пожалуйста, введите <u>ОДНО</u> слово!')
         logger.warning('--------------------------------------------------------')
         logger.warning(f'Слова: {message.text}')
         logger.warning('Введено несколько слов')
         return
     # проверка, что слово изначально правильно написано
     if dictionary.check(message.text):
-        await message.reply('Вы правильно написали слово!')
+        await message.reply('Вы <u>правильно</u> написали слово!')
         logger.info('--------------------------------------------------------')
         logger.info(f'Слово: {message.text}')
         logger.info('Написано правильно')
         return
     # проверка на то, что вариантов не найдёт
     if not dictionary.suggest(message.text):
-        await message.reply('К сожалению, исправления слова не найдены!')
+        await message.reply('К сожалению, исправления слова <u>не найдены</u>!')
         logger.warning('--------------------------------------------------------')
         logger.warning(f'Слово: {message.text}')
         logger.warning('Исправления не найдены')
@@ -67,30 +71,16 @@ async def get_word(message: types.Message):
     logger.info(f'Слово: {message.text}')
     # получение клавиатуры (отправляем слово в нижнем регистре)
     keyboard = await get_keyboard_corrections(message.text.lower())
-    await message.reply(f'Вы ввели слово {message.text}. \nВозможные исправления Вашего слова: ', reply_markup=keyboard)
+    await message.reply(f'Вы ввели слово <i>{message.text}</i>. \nВарианты возможных исправлений Вашего слова: ',
+                        reply_markup=keyboard)
 
 
 # исправление слова и возвращение клавиатуры с возможными вариантами
 async def get_keyboard_corrections(word):
     start_time = time.time()
 
-    # словарь с значениями степеней сходства изменённого и исходного слова (от 0 до 1)
-    sim = dict()
-    # получение множества с возможными исправлениями
-    # TODO: Пофиксить некоторые элементы в списке изменённых слов
-    #   (когда в элементе 2 непонятных слова через пробел + непонятные слова)
-    #   например,
-    corr_words = set(dictionary.suggest(word))
-    for corr_word in corr_words:
-        # получаем значение сходства
-        measure = difflib.SequenceMatcher(None, word, corr_word).ratio()
-        # заносим в виде - слово: значение
-        sim[corr_word] = measure
-    # сортируем по значению сходства
-    sim = dict(sorted(sim.items(), key=lambda x: x[1]))
-    # список со всеми исправленными словами в порядке убывания значений их сходства
-    corr_words = list(reversed(sim))
-
+    # список со всеми исправленными словами
+    corr_words = dictionary.suggest(word)
     # создаем кнопки
     buttons = [
         types.InlineKeyboardButton(text=el, callback_data=cb.new(old_word=word, word=el)) for el in corr_words
@@ -100,8 +90,7 @@ async def get_keyboard_corrections(word):
     keyboard.add(*buttons)
 
     end_time = time.time()
-    logger.info(f'Старый список: {dictionary.suggest(word)}')
-    logger.info(f'Новый список: {corr_words}')
+    logger.info(f'Список исправлений: {corr_words}')
     logger.info(f'Время исправления слова: {end_time - start_time} секунд')
     return keyboard
 
@@ -114,7 +103,8 @@ async def callbacks_corr_word(call: types.CallbackQuery, callback_data: dict):
     word = callback_data['word']
     # получаем правило с помощью get_rule()
     rule = await get_rule(old_word, word)
-    await call.message.answer(f'Правильное написание: {word} \nПравило: {rule}')
+    await call.message.answer(f'Правильное написание: <i>{word}</i> \n'
+                              f'<i>Правило</i>, по которому написано слово: {rule}')
     # отчитываемся о получении колбэка
     await call.answer()
 
@@ -140,28 +130,21 @@ async def get_rule(old_word, word):
         )
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # если всё равно слово не найдено
-        if soup.blockquote:
-            logger.warning('--------------------------------------------------------')
-            logger.warning(f'Слово: {word}')
-            logger.warning(f'Правило не найдено')
-            return rule
-
-    # берём все слова
-    word_rows = soup.find_all("div", class_='col-xs-12 col-sm-4 border-bottom search-item')
-    for row in word_rows:
-        # ищем нужное слово
-        if row.a.text == word:
-            rule = row.small.text.lower()
-            break
-
-    if rule is None:
+    # если всё равно слово не найдено
+    if soup.blockquote:
         word = morph.normal_forms(old_word)[0]
         response = requests.get(
             'https://gramotei.online/how-to-spell',
             params={'keyword': word}
         )
         soup = BeautifulSoup(response.text, 'html.parser')
+
+    # и всё равно не найдено
+    if soup.blockquote:
+        logger.warning('--------------------------------------------------------')
+        logger.warning(f'Слово: {word}')
+        logger.warning(f'Правило не найдено')
+        return rule
 
     # берём все слова
     word_rows = soup.find_all("div", class_='col-xs-12 col-sm-4 border-bottom search-item')
