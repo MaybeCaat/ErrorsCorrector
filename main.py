@@ -3,7 +3,6 @@ import app_logger
 import time
 import enchant
 import requests
-import difflib
 from aiogram import Bot, Dispatcher, types, executor
 from aiogram.utils.callback_data import CallbackData
 from pymorphy2 import MorphAnalyzer
